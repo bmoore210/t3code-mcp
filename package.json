@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "t3": "0.0.45",
     "typescript": "^5.7.0"
   }
 }
