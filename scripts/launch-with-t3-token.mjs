@@ -1,14 +1,44 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const distEntry = join(here, "..", "dist", "index.js");
+const runtimePath = join(homedir(), ".t3", "userdata", "server-runtime.json");
 
 // Pinned so a cold start never pulls an unreviewed `t3@latest` from npm.
 const T3_CLI_VERSION = process.env.T3_CLI_VERSION?.trim() || "0.0.45";
+
+function t3Origin() {
+  if (process.env.T3_ORIGIN) return process.env.T3_ORIGIN.replace(/\/$/, "");
+  try {
+    const origin = JSON.parse(readFileSync(runtimePath, "utf8")).origin;
+    return typeof origin === "string" ? origin.replace(/\/$/, "") : null;
+  } catch {
+    return null;
+  }
+}
+
+// Minting is gated on a live server so a start that cannot succeed does not
+// leave a seven-day token behind; MCP hosts retry failed starts many times.
+async function assertT3Reachable() {
+  const origin = t3Origin();
+  if (!origin) {
+    throw new Error(`T3 Code is not running (${runtimePath} not found). Start it, or set T3_ORIGIN.`);
+  }
+  try {
+    const res = await fetch(`${origin}/.well-known/t3/environment`, {
+      signal: AbortSignal.timeout(3_000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch (error) {
+    throw new Error(`T3 Code at ${origin} is not responding (${error.message}). Start it before launching.`);
+  }
+}
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -66,7 +96,11 @@ async function issueToken() {
 }
 
 async function main() {
-  const token = process.env.T3_TOKEN?.trim() || (await issueToken());
+  let token = process.env.T3_TOKEN?.trim();
+  if (!token) {
+    await assertT3Reachable();
+    token = await issueToken();
+  }
   const child = spawn(process.execPath, [distEntry], {
     env: { ...process.env, T3_TOKEN: token },
     stdio: "inherit",
