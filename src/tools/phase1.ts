@@ -243,7 +243,7 @@ export function registerPhase1(server: McpServer, getClient: () => T3Client) {
           commandId: newId(),
           threadId: t.id,
           message: { messageId: newId(), role: "user", text: args.message, attachments: [] },
-          runtimeMode: args.runtimeMode ?? t.runtimeMode ?? "full-access",
+          runtimeMode: args.runtimeMode ?? t.runtimeMode ?? "approval-required",
           interactionMode: args.interactionMode ?? t.interactionMode ?? "default",
           createdAt: nowIso(),
         };
