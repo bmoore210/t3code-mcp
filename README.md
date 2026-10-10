@@ -32,6 +32,12 @@ claude mcp add --scope user t3code -- node /Users/thomascrundwell/Documents/proj
 
 (Token is picked up from `.env` in this directory; alternatively pass `--env T3_TOKEN=...`.)
 
+Or let `scripts/launch-with-t3-token.mjs` mint a short-lived token on each start (uses `T3_TOKEN` when set; otherwise runs the pinned `t3` CLI, `T3_TOKEN_TTL` default `7d`, `T3_CLI_VERSION` overrides the pin):
+
+```bash
+claude mcp add --scope user t3code -- node /path/to/t3code-mcp/scripts/launch-with-t3-token.mjs
+```
+
 ## Tools
 
 **Visibility** — `t3_status`, `list_projects`, `list_threads` (filter by project / attention state), `get_thread`, `search_threads`
