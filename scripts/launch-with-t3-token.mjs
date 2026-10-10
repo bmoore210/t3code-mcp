@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -61,16 +61,23 @@ function run(command, args) {
   });
 }
 
-async function issueToken() {
+// The installed devDependency starts in well under a second; npx is only a
+// fallback for a checkout without node_modules, and it can take minutes on a
+// cold cache, longer than MCP hosts wait for a server to start.
+function t3CliArgs() {
+  const local = join(here, "..", "node_modules", "t3", "bin", "t3.js");
+  if (existsSync(local)) return [local];
   const npx =
     process.platform === "win32"
       ? join(dirname(process.execPath), "node_modules", "npm", "bin", "npx-cli.js")
       : "npx";
+  return [npx, "--yes", `t3@${T3_CLI_VERSION}`];
+}
+
+async function issueToken() {
   const ttl = process.env.T3_TOKEN_TTL?.trim() || "7d";
   const result = await run(process.execPath, [
-    npx,
-    "--yes",
-    `t3@${T3_CLI_VERSION}`,
+    ...t3CliArgs(),
     "auth",
     "session",
     "issue",
